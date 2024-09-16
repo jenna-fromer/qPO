@@ -102,6 +102,6 @@ def acquire_sequential_qei(smiles, model, featurizer, gpu, best_f, c: int = 1, b
 
     print(f'X_test shape in qei: {X_test.shape}')
     selections, _ = botorch.optim.optimize.optimize_acqf_discrete(acq_function, q=batch_size, choices=X_test, max_batch_size=batch_size, unique=True)
-    idx = np.where( (selections==X_test[:,None]).all(-1) )[1]
+    idx = np.where( (X_test==selections[:,None]).all(-1) )[1]
 
     return [smiles[i] for i in idx] 

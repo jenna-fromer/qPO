@@ -1,3 +1,7 @@
+import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]="2"
+
 from pathlib import Path 
 from rdkit import Chem
 from rdkit.Chem import rdFingerprintGenerator
@@ -56,7 +60,7 @@ def run(
     dataset, objective, 
     c: int = 1, gpu: bool = True, 
     n_iter: int = 10, random_seeds: list = None, 
-    batch_size: int = 100, initial_batch_size: int = 100, 
+    batch_size: int = 100, initial_batch_size: int = None, 
     res_dir: str = 'results', method: str = 'ours', 
     res_file: str = None): 
 
@@ -78,6 +82,7 @@ def run(
     featurizer = fp_featurizer(all_smiles)
     storage = []
     test_data = {smi: score for smi, score in zip(all_smiles, all_data[objective])}
+    initial_batch_size = initial_batch_size or batch_size
 
     # run BO 
     for rs in random_seeds: 
@@ -113,7 +118,7 @@ def run(
         for iter in range(1, n_iter+1): 
             # acquire 
             selected_smiles = acquire(
-                method=method, smiles=unacquired_smiles, model=model, featurizer=featurizer, batch_size=batch_size, gpu=gpu
+                method=method, smiles=unacquired_smiles, model=model, featurizer=featurizer, batch_size=batch_size, gpu=gpu, best_f=max(acq_vals)
             ) 
 
             # get actual scores and update list of acquired data and unacquired smiles 
@@ -150,7 +155,7 @@ def parse_args():
     parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--n_iter', type=int, default=10)
     parser.add_argument('--batch_size', type=int, default=100)
-    parser.add_argument('--initial_batch_size', type=int, default=100)
+    parser.add_argument('--initial_batch_size', type=int, default=None)
     parser.add_argument('--res_dir', type=str, default='results')
     parser.add_argument('--res_file', type=str, default=None)
 
@@ -160,6 +165,8 @@ def parse_args():
 if __name__=='__main__':
     args = parse_args()
     print(args)
+    args.dataset='delaney-processed'
+    args.objective ='ESOL predicted log solubility in mols per litre'
     run(
         dataset=args.dataset,
         objective=args.objective,
