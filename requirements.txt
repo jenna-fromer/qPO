@@ -1,0 +1,7 @@
+rdkit 
+pandas 
+seaborn 
+ipykernel 
+botorch 
+gpytorch
+scipy
