@@ -1,7 +1,3 @@
-import os
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="2"
-
 from pathlib import Path 
 from rdkit import Chem
 from rdkit.Chem import rdFingerprintGenerator
@@ -15,6 +11,22 @@ import argparse
 
 from gp import TanimotoGP, fit_gp_hyperparameters
 from acquisition_functions import acquire
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--method', type=str, default='qEI', choices=['Ours', 'pTS', 'Greedy', 'UCB', 'qEI'])
+    parser.add_argument('--dataset', type=str, default='Lipophilicity', choices=['Lipophilicity', 'delaney-processed', 'qm9'])
+    parser.add_argument('--objective', type=str, default='exp')
+    parser.add_argument('--c', type=int, default=1)
+    parser.add_argument('--gpu', action='store_true', default=False)
+    parser.add_argument('--n_iter', type=int, default=10)
+    parser.add_argument('--batch_size', type=int, default=100)
+    parser.add_argument('--initial_batch_size', type=int, default=None)
+    parser.add_argument('--res_dir', type=str, default='results')
+    parser.add_argument('--res_file', type=str, default=None)
+
+    args = parser.parse_args()
+    return args 
 
 def smiles_to_fingerprint_arr(
     smiles_list: list[str],
@@ -36,6 +48,8 @@ def fp_featurizer(smiles_list):
 
 def update_acquired(acquired_data, unacquired_smiles: set, selected_smiles, test_data): 
     for smi in selected_smiles: 
+        if smi not in unacquired_smiles:
+            print(smi) 
         unacquired_smiles.remove(smi)
         acquired_data[smi] = test_data[smi]
     
@@ -143,30 +157,12 @@ def run(
             # print an update
             print(f'\t Iter {iter} -- top 1: {max(acq_vals):0.2f}, top 10 ave: {np.mean(acq_vals[-10:]):0.2f}, top 50 ave: {np.mean(acq_vals[-50:]):0.2f}')
 
-    with open(res_dir / f'{dataset}_{objective}_batch_{batch_size}_initbatch_{initial_batch_size}_results.json', 'w') as f: 
+    with open(res_dir / res_file, 'w') as f: 
         json.dump(storage, f, indent='\t')
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--method', type=str, default='qEI', choices=['Ours', 'pTS', 'Greedy', 'UCB', 'qEI'])
-    parser.add_argument('--dataset', type=str, default='Lipophilicity', choices=['Lipophilicity', 'delaney-processed', 'qm9'])
-    parser.add_argument('--objective', type=str, default='exp')
-    parser.add_argument('--c', type=int, default=1)
-    parser.add_argument('--gpu', action='store_true', default=False)
-    parser.add_argument('--n_iter', type=int, default=10)
-    parser.add_argument('--batch_size', type=int, default=100)
-    parser.add_argument('--initial_batch_size', type=int, default=None)
-    parser.add_argument('--res_dir', type=str, default='results')
-    parser.add_argument('--res_file', type=str, default=None)
-
-    args = parser.parse_args()
-    return args 
 
 if __name__=='__main__':
     args = parse_args()
     print(args)
-    args.dataset='delaney-processed'
-    args.objective ='ESOL predicted log solubility in mols per litre'
     run(
         dataset=args.dataset,
         objective=args.objective,

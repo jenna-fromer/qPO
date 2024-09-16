@@ -1,4 +1,4 @@
-Compound ID,ESOL predicted log solubility in mols per litre,Minimum Degree,Molecular Weight,Number of H-Bond Donors,Number of Rings,Number of Rotatable Bonds,Polar Surface Area,measured log solubility in mols per litre,smiles
+Compound ID,predicted_log_solubility,Minimum Degree,Molecular Weight,Number of H-Bond Donors,Number of Rings,Number of Rotatable Bonds,Polar Surface Area,measured_log_solubility,smiles
 Amigdalin,-0.9740000000000001,1,457.4320000000001,7,3,7,202.31999999999996,-0.77,OCC3OC(OCC2OC(OC(C#N)c1ccccc1)C(O)C(O)C2O)C(O)C(O)C3O 
 Fenfuram,-2.885,1,201.22500000000002,1,2,2,42.24,-3.3,Cc1occc1C(=O)Nc2ccccc2
 citral,-2.5789999999999997,1,152.237,0,0,4,17.07,-2.06,CC(C)=CCCC(C)=CC(=O)
@@ -212,7 +212,7 @@ Fluorobenzene,-2.5140000000000002,1,96.10399999999998,0,1,0,0.0,-1.8,Fc1ccccc1
 Ethyl acetate,-0.77,1,88.106,0,0,1,26.3,-0.04,CCOC(=O)C
 "2,2-Dimethylpentane",-2.938,1,100.20499999999998,0,0,1,0.0,-4.36,CCCC(C)(C)C
 Pentamethylbenzene,-3.9930000000000003,1,148.249,0,1,0,0.0,-4.0,Cc1cc(C)c(C)c(C)c1C
-eucalyptol,-2.5789999999999997,1,154.253,0,3,0,9.23,-1.64,CC12CCC(CC1)C(C)(C)O2 
+eucalyptol,-2.5789999999999997,1,154.253,0,3,0,9.23,-1.64,CC12CCC(CC1)C(C)(C)O2
 dibutyl sebacate,-4.726,1,314.46600000000007,0,0,15,52.60000000000001,-3.8960000000000004,CCCCOC(=O)CCCCCCCCC(=O)OCCCC
 "4,4'-PCB",-5.2989999999999995,1,223.102,0,2,1,0.0,-6.56,Clc1ccc(cc1)c2ccc(Cl)cc2 
 "2,3-Dimethylpyridine",-2.0669999999999997,1,107.156,0,1,0,12.89,0.38,Cc1cccnc1C
