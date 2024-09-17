@@ -12,7 +12,7 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
         'pTS': acquire_ts,
         'qEI': acquire_sequential_qei,
     }
-    if ( method == 'Ours' or method == 'pTS' ) and len(smiles) > 5000: 
+    if ( method == 'Ours' or method == 'pTS' or method == 'qEI') and len(smiles) > 5000: 
         smiles_filtered = acq_functions['Greedy'](
             smiles=smiles, 
             model=model, 
@@ -101,7 +101,7 @@ def acquire_sequential_qei(smiles, model, featurizer, gpu, best_f, c: int = 1, b
     if c == -1: 
         weights = torch.as_tensor([-1]).cuda() if gpu else torch.as_tensor([-1])
         objective = botorch.acquisition.objective.LinearMCObjective(weights)
-        acq_function = botorch.acquisition.logei.qLogExpectedImprovement(model=model, best_f=best_f, sampler=sampler, objective=objective)
+        acq_function = botorch.acquisition.logei.qLogExpectedImprovement(model=model, best_f=c*best_f, sampler=sampler, objective=objective)
     else: 
         acq_function = botorch.acquisition.logei.qLogExpectedImprovement(model=model, best_f=best_f, sampler=sampler)
 

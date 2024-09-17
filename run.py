@@ -15,7 +15,7 @@ from acquisition_functions import acquire
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--method', type=str, default='qEI', choices=['Ours', 'pTS', 'Greedy', 'UCB', 'qEI'])
-    parser.add_argument('--dataset', type=str, default='Lipophilicity', choices=['Lipophilicity', 'delaney-processed', 'qm9'])
+    parser.add_argument('--dataset', type=str, default='Lipophilicity')
     parser.add_argument('--objective', type=str, default='exp')
     parser.add_argument('--c', type=int, default=1)
     parser.add_argument('--gpu', action='store_true', default=False)
@@ -111,7 +111,7 @@ def run(
         acquired_data, unacquired_smiles = update_acquired(acquired_data, unacquired_smiles, selected_smiles, test_data)
 
         # update storage 
-        acq_vals = sorted([c*s for s in acquired_data.values()])
+        acq_vals = sorted(acquired_data.values(), key = lambda s: c*s)
         top_aves = {f'Top {k} ave': np.mean(acq_vals[-1*k:]) for k in [1, 10, 50, 100]}
         storage.append({**{
             'Method': method, 
@@ -127,19 +127,22 @@ def run(
         # print
         acq_vals = sorted(acquired_data.values())
         print(f'METHOD: {method}, SEED: {rs}')
-        print(f'\t Iter 0 -- top 1: {max(acq_vals):0.2f}, top 10 ave: {np.mean(acq_vals[-10:]):0.2f}, top 50 ave: {np.mean(acq_vals[-50:]):0.2f}')
+        print(f'\t Iter 0 -- top 1: {np.mean(acq_vals[-1:]):0.2f}, top 10 ave: {np.mean(acq_vals[-10:]):0.2f}, top 50 ave: {np.mean(acq_vals[-50:]):0.2f}')
         
         for iter in range(1, n_iter+1): 
             # acquire 
             selected_smiles = acquire(
-                method=method, smiles=unacquired_smiles, model=model, featurizer=featurizer, batch_size=batch_size, gpu=gpu, best_f=max(acq_vals)
+                method=method, smiles=unacquired_smiles, 
+                model=model, featurizer=featurizer, 
+                batch_size=batch_size, gpu=gpu, 
+                best_f=max(acq_vals), c=c
             ) 
 
             # get actual scores and update list of acquired data and unacquired smiles 
             acquired_data, unacquired_smiles = update_acquired(acquired_data, unacquired_smiles, selected_smiles, test_data)
 
             # update storage 
-            acq_vals = sorted([c*s for s in acquired_data.values()])
+            acq_vals = sorted(acquired_data.values(), key = lambda s: c*s)
             top_aves = {f'Top {k} ave': np.mean(acq_vals[-1*k:]) for k in [1, 10, 50, 100]}
             storage.append({**{
                 'Method': method, 
@@ -155,7 +158,7 @@ def run(
             model = train_model(acquired_data, featurizer, gpu=gpu)
 
             # print an update
-            print(f'\t Iter {iter} -- top 1: {max(acq_vals):0.2f}, top 10 ave: {np.mean(acq_vals[-10:]):0.2f}, top 50 ave: {np.mean(acq_vals[-50:]):0.2f}')
+            print(f'\t Iter {iter} -- top 1: {np.mean(acq_vals[-1:]):0.2f}, top 10 ave: {np.mean(acq_vals[-10:]):0.2f}, top 50 ave: {np.mean(acq_vals[-50:]):0.2f}')
 
     with open(res_dir / res_file, 'w') as f: 
         json.dump(storage, f, indent='\t')
