@@ -88,7 +88,7 @@ def run(
         res_file = f'{dataset}_{objective}_batch{batch_size}_initbatch{initial_batch_size}_method{method}.json'
 
     if random_seeds is None: 
-        random_seeds = range(10)
+        random_seeds = range(5)
     
     # load data, initialize featurizer and other objects 
     all_data = pd.read_csv(datafile)
@@ -167,7 +167,7 @@ if __name__=='__main__':
         dataset=args.dataset,
         objective=args.objective,
         c=args.c, gpu=args.gpu, 
-        n_iter=args.n_iter, random_seeds=range(10),
+        n_iter=args.n_iter, random_seeds=range(5),
         batch_size=args.batch_size, initial_batch_size=args.initial_batch_size,
         res_dir=args.res_dir, res_file=args.res_file, 
         method=args.method,

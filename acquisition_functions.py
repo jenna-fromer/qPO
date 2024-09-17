@@ -13,7 +13,7 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
         'qEI': acquire_sequential_qei,
     }
     if ( method == 'Ours' or method == 'pTS' ) and len(smiles) > 5000: 
-        smiles_filtered = acq_functions['mean'](
+        smiles_filtered = acq_functions['Greedy'](
             smiles=smiles, 
             model=model, 
             featurizer=featurizer, 
@@ -69,7 +69,7 @@ def acquire_ours(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 1
     samples = p_yx.rvs(size=Ns, random_state=seed)
     top_samples = np.array([np.argmax(c*sample) for sample in samples])
     probs = np.bincount(top_samples, minlength=len(mean))/Ns # [np.sum(top_k_samples==i)/N_samples for i in range(samples.shape[1])]
-    acquisition_scores = {smi: (-1*prob, -1*mean) for smi, prob, mean in zip(smiles, probs, mean)} # for equal probs, use mean for sorting 
+    acquisition_scores = {smi: (-1*prob, -1*c*mean) for smi, prob, mean in zip(smiles, probs, mean)} # for equal probs, use mean for sorting 
     sorted_smis = sorted(smiles, key=lambda smi: acquisition_scores[smi] )
     return sorted_smis[:batch_size]
 
@@ -98,11 +98,14 @@ def acquire_sequential_qei(smiles, model, featurizer, gpu, best_f, c: int = 1, b
     X_test = np.array([featurizer[smi] for smi in smiles])
     X_test = torch.as_tensor(X_test).cuda() if gpu else torch.as_tensor(X_test)    
     sampler = botorch.sampling.normal.SobolQMCNormalSampler(sample_shape=X_test[0].shape, seed=seed)
-    acq_function = botorch.acquisition.logei.qLogExpectedImprovement(model=model, best_f=best_f, sampler=sampler)
+    if c == -1: 
+        weights = torch.as_tensor([-1]).cuda() if gpu else torch.as_tensor([-1])
+        objective = botorch.acquisition.objective.LinearMCObjective(weights)
+        acq_function = botorch.acquisition.logei.qLogExpectedImprovement(model=model, best_f=best_f, sampler=sampler, objective=objective)
+    else: 
+        acq_function = botorch.acquisition.logei.qLogExpectedImprovement(model=model, best_f=best_f, sampler=sampler)
 
-    print(f'X_test shape in qei: {X_test.shape}')
     selections, _ = botorch.optim.optimize.optimize_acqf_discrete(acq_function, q=batch_size, choices=X_test, max_batch_size=batch_size, unique=True)
     idx = np.where( (X_test.cpu()==selections.cpu()[:,None]).all(-1) )[1]
-    print([smiles[i] for i in idx])
 
     return [smiles[i] for i in idx] 

@@ -1,7 +1,7 @@
-dataset_array=['Lipophilicity']
-objective_array=['exp']
-n_iter = [10, 10]
-batch_size = [50, 50]
+dataset_array=['qm9']
+objective_array=['gap']
+n_iter = [20]
+batch_size = [100]
 
 methods = ['Ours', 'pTS', 'UCB', 'Greedy', 'qEI']
 
@@ -11,5 +11,5 @@ for dataset, obj, n_i, b_s in zip(dataset_array, objective_array, n_iter, batch_
         call_str = f'python run.py --dataset={dataset} --objective={obj} --method={method} --n_iter={n_i} --batch_size={b_s} --gpu'
         call_strs.append(call_str)
 
-with open('scripts/experiments.txt', 'w') as outfile:
+with open('scripts/experiments_antibiotics.txt', 'w') as outfile:
     outfile.write("\n".join(call_strs))

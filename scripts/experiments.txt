@@ -1,5 +1,5 @@
-python run.py --dataset=Lipophilicity --objective=exp --method=Ours --n_iter=10 --batch_size=50 --gpu
-python run.py --dataset=Lipophilicity --objective=exp --method=pTS --n_iter=10 --batch_size=50 --gpu
-python run.py --dataset=Lipophilicity --objective=exp --method=UCB --n_iter=10 --batch_size=50 --gpu
-python run.py --dataset=Lipophilicity --objective=exp --method=Greedy --n_iter=10 --batch_size=50 --gpu
-python run.py --dataset=Lipophilicity --objective=exp --method=qEI --n_iter=10 --batch_size=50 --gpu
+python run.py --dataset=qm9 --objective=gap --method=Ours --n_iter=20 --batch_size=100 --gpu
+python run.py --dataset=qm9 --objective=gap --method=pTS --n_iter=20 --batch_size=100 --gpu
+python run.py --dataset=qm9 --objective=gap --method=UCB --n_iter=20 --batch_size=100 --gpu
+python run.py --dataset=qm9 --objective=gap --method=Greedy --n_iter=20 --batch_size=100 --gpu
+python run.py --dataset=qm9 --objective=gap --method=qEI --n_iter=20 --batch_size=100 --gpu
