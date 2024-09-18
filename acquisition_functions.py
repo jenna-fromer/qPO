@@ -23,7 +23,8 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
             smiles=smiles_filtered, 
             model=model, 
             featurizer=featurizer, 
-            gpu=gpu, c=c, batch_size=batch_size, **kwargs
+            gpu=gpu, c=c, batch_size=batch_size, 
+            best_f=best_f, **kwargs
         )
     
     return acq_functions[method](
@@ -66,8 +67,15 @@ def acquire_ucb(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 10
 def acquire_ours(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, Ns: int = 10000, seed: int = None, **kwargs): 
     mean, cov = mean_cov_from_gp(smiles=smiles, model=model, featurizer=featurizer, full_cov=True, gpu=gpu)
     p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
-    samples = p_yx.rvs(size=Ns, random_state=seed)
-    top_samples = np.array([np.argmax(c*sample) for sample in samples])
+    try: 
+        samples = p_yx.rvs(size=Ns, random_state=seed)
+    except: 
+        print('Error sampling from multivariate, adding noise to diagonal')
+        cov = cov + np.identity(len(mean))*1e-5
+        p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
+        samples = p_yx.rvs(size=Ns, random_state=seed)
+    
+    top_samples = np.array([np.argmax(sample) if c==1 else np.argmin(samples) for sample in samples])
     probs = np.bincount(top_samples, minlength=len(mean))/Ns # [np.sum(top_k_samples==i)/N_samples for i in range(samples.shape[1])]
     acquisition_scores = {smi: (-1*prob, -1*c*mean) for smi, prob, mean in zip(smiles, probs, mean)} # for equal probs, use mean for sorting 
     sorted_smis = sorted(smiles, key=lambda smi: acquisition_scores[smi] )
@@ -76,7 +84,13 @@ def acquire_ours(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 1
 def acquire_ts(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, seed: int = None, **kwargs): 
     mean, cov = mean_cov_from_gp(smiles=smiles, model=model, featurizer=featurizer, full_cov=True, gpu=gpu)
     p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
-    samples = p_yx.rvs(size=batch_size, random_state=seed)
+    try: 
+        samples = p_yx.rvs(size=batch_size, random_state=seed)
+    except: 
+        print('Error sampling from multivariate, adding noise to diagonal')
+        cov = cov + np.identity(len(mean))*1e-5
+        p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
+        samples = p_yx.rvs(size=batch_size, random_state=seed)
 
     selected_inds = []
 
@@ -89,10 +103,6 @@ def acquire_ts(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100
     selected_smis = [smiles[i] for i in selected_inds]
 
     return selected_smis
-
-# def acquire_max_value_entropy(smiles, model, featurizer, gpu, best_f, c: int = 1, batch_size: int = 100, seed: int = None, **kwargs):
-#     sampler = botorch.sampling.normal.SobolQMCNormalSampler(sample_shape=1024, seed=seed)
-#     qLogEI = botorch.acquisition.logei.qLogExpectedImprovement(model, best_f, sampler)
 
 def acquire_sequential_qei(smiles, model, featurizer, gpu, best_f, c: int = 1, batch_size: int = 100, seed: int = None, **kwargs):
     X_test = np.array([featurizer[smi] for smi in smiles])
@@ -107,5 +117,5 @@ def acquire_sequential_qei(smiles, model, featurizer, gpu, best_f, c: int = 1, b
 
     selections, _ = botorch.optim.optimize.optimize_acqf_discrete(acq_function, q=batch_size, choices=X_test, max_batch_size=batch_size, unique=True)
     idx = np.where( (X_test.cpu()==selections.cpu()[:,None]).all(-1) )[1]
-
+    idx = list(set(idx))[:batch_size]
     return [smiles[i] for i in idx] 

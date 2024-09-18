@@ -125,7 +125,6 @@ def run(
         model = train_model(acquired_data, featurizer, gpu=gpu)
 
         # print
-        acq_vals = sorted(acquired_data.values())
         print(f'METHOD: {method}, SEED: {rs}')
         print(f'\t Iter 0 -- top 1: {np.mean(acq_vals[-1:]):0.2f}, top 10 ave: {np.mean(acq_vals[-10:]):0.2f}, top 50 ave: {np.mean(acq_vals[-50:]):0.2f}')
         
@@ -135,7 +134,7 @@ def run(
                 method=method, smiles=unacquired_smiles, 
                 model=model, featurizer=featurizer, 
                 batch_size=batch_size, gpu=gpu, 
-                best_f=max(acq_vals), c=c
+                best_f=max(acq_vals) if c == 1 else min(acq_vals), c=c
             ) 
 
             # get actual scores and update list of acquired data and unacquired smiles 
@@ -160,8 +159,8 @@ def run(
             # print an update
             print(f'\t Iter {iter} -- top 1: {np.mean(acq_vals[-1:]):0.2f}, top 10 ave: {np.mean(acq_vals[-10:]):0.2f}, top 50 ave: {np.mean(acq_vals[-50:]):0.2f}')
 
-    with open(res_dir / res_file, 'w') as f: 
-        json.dump(storage, f, indent='\t')
+        with open(res_dir / res_file, 'w') as f: 
+            json.dump(storage, f, indent='\t')
 
 if __name__=='__main__':
     args = parse_args()
@@ -170,7 +169,7 @@ if __name__=='__main__':
         dataset=args.dataset,
         objective=args.objective,
         c=args.c, gpu=args.gpu, 
-        n_iter=args.n_iter, random_seeds=range(5),
+        n_iter=args.n_iter, random_seeds=range(5,10),
         batch_size=args.batch_size, initial_batch_size=args.initial_batch_size,
         res_dir=args.res_dir, res_file=args.res_file, 
         method=args.method,

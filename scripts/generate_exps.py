@@ -1,7 +1,7 @@
 dataset_array=['antibiotics']
 objective_array=['Mean']
 n_iter = [20]
-batch_size = [50]
+batch_size = [20]
 
 methods = ['Ours', 'pTS', 'UCB', 'Greedy', 'qEI']
 

@@ -9,13 +9,20 @@ from tqdm import tqdm
 import random 
 import colorsys
 
-theme_colors = ['#405E90','#D45127','#AA2165','#818084']
+method_colors = {
+    'Ours': '#1C6090',
+    'pTS': '#FF7F0E',
+    'qEI': '#39A039',
+    'UCB': '#BB2829',
+    'Greedy': '#8E5BBB' 
+}
 
-cluster_colors = {
-    'None': '#0E713E',
-    'fps': '#44AA99',
-    'objs': '#CC6677',
-    'both': '#882255'
+method_styles = {
+    'Ours': (1),
+    'pTS': (1, 0.2),
+    'qEI': (0.2, 0.2),
+    'UCB': (2, 1),
+    'Greedy': (4, 1, 2, 1)
 }
 
 it_colors = ['#3491C1', '#7D2AC1', '#B9305C', '#DC5501', '#DE9A00', '#377501', '#B4B5B4']

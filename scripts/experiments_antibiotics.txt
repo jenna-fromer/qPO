@@ -1,5 +1,5 @@
-python run.py --c -1 --dataset=antibiotics --objective=Mean --method=Ours --n_iter=20 --batch_size=50 --gpu
-python run.py --c -1 --dataset=antibiotics --objective=Mean --method=pTS --n_iter=20 --batch_size=50 --gpu
-python run.py --c -1 --dataset=antibiotics --objective=Mean --method=UCB --n_iter=20 --batch_size=50 --gpu
-python run.py --c -1 --dataset=antibiotics --objective=Mean --method=Greedy --n_iter=20 --batch_size=50 --gpu
-python run.py --c -1 --dataset=antibiotics --objective=Mean --method=qEI --n_iter=20 --batch_size=50 --gpu
+python run.py --c -1 --dataset=antibiotics --objective=Mean --method=Ours --n_iter=20 --batch_size=20 --gpu
+python run.py --c -1 --dataset=antibiotics --objective=Mean --method=pTS --n_iter=20 --batch_size=20 --gpu
+python run.py --c -1 --dataset=antibiotics --objective=Mean --method=UCB --n_iter=20 --batch_size=20 --gpu
+python run.py --c -1 --dataset=antibiotics --objective=Mean --method=Greedy --n_iter=20 --batch_size=20 --gpu
+python run.py --c -1 --dataset=antibiotics --objective=Mean --method=qEI --n_iter=20 --batch_size=20 --gpu
