@@ -14,7 +14,7 @@ from acquisition_functions import acquire
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--method', type=str, default='qEI', choices=['Ours', 'pTS', 'Greedy', 'UCB', 'qEI'])
+    parser.add_argument('--method', type=str, default='qEI', choices=['Ours', 'pTS', 'Greedy', 'UCB', 'qEI', 'random', 'random_10k'])
     parser.add_argument('--dataset', type=str, default='Lipophilicity')
     parser.add_argument('--objective', type=str, default='exp')
     parser.add_argument('--c', type=int, default=1)
@@ -91,7 +91,7 @@ def run(
         random_seeds = range(5)
     
     # load data, initialize featurizer and other objects 
-    all_data = pd.read_csv(datafile)
+    all_data = pd.read_csv(datafile).sample(frac=1, random_state=0) # shuffle order 
     all_smiles = list(all_data['smiles'])
     featurizer = fp_featurizer(all_smiles)
     storage = []
@@ -169,7 +169,7 @@ if __name__=='__main__':
         dataset=args.dataset,
         objective=args.objective,
         c=args.c, gpu=args.gpu, 
-        n_iter=args.n_iter, random_seeds=range(5,10),
+        n_iter=args.n_iter, random_seeds=range(10),
         batch_size=args.batch_size, initial_batch_size=args.initial_batch_size,
         res_dir=args.res_dir, res_file=args.res_file, 
         method=args.method,

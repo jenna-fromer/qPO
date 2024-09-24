@@ -3,3 +3,4 @@ python run.py --dataset=qm9 --objective=gap --method=pTS --n_iter=20 --batch_siz
 python run.py --dataset=qm9 --objective=gap --method=UCB --n_iter=20 --batch_size=100 --gpu
 python run.py --dataset=qm9 --objective=gap --method=Greedy --n_iter=20 --batch_size=100 --gpu
 python run.py --dataset=qm9 --objective=gap --method=qEI --n_iter=20 --batch_size=100 --gpu
+python run.py --dataset=qm9 --objective=gap --method=random_10k --n_iter=20 --batch_size=100 --gpu

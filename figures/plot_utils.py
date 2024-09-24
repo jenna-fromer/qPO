@@ -8,13 +8,16 @@ import networkx as nx
 from tqdm import tqdm
 import random 
 import colorsys
+import scipy
+import numpy as np 
 
 method_colors = {
     'Ours': '#1C6090',
     'pTS': '#FF7F0E',
     'qEI': '#39A039',
     'UCB': '#BB2829',
-    'Greedy': '#8E5BBB' 
+    'Greedy': '#8E5BBB',
+    'random_10k': '#9A9A96'
 }
 
 method_styles = {
@@ -86,3 +89,23 @@ def scale_lightness(rgb, scale_l):
 def make_color_darker(scale, color: str): 
     rgb = mpl.colors.ColorConverter.to_rgb(color)
     return scale_lightness(rgb, scale)
+
+def df_to_latex(data: pd.DataFrame):
+    latex_data = []
+    for method in data.Method.unique(): 
+        df_method = data.loc[data.Method == method]
+        for iter in df_method.Iteration.unique(): 
+            df_method_iter = df_method.loc[df_method.Iteration == iter]
+            df_method_iter = df_method_iter.drop('Top 1 ave', axis=1)
+            stor = {}
+            for col in df_method_iter.columns: 
+                if 'Top' in col or 'top' in col: 
+                    mean = np.mean(df_method_iter[f'{col}'])
+                    se = scipy.stats.sem(df_method_iter[f'{col}'])
+                    stor[col] = f'{mean:0.2f} $\pm$ {se:0.2f}'
+            latex_data.append({**{
+                'Method': method, 
+                'Iteration': iter, 
+            },**stor})
+    latex_df = pd.DataFrame(latex_data).sort_values(by=['Method', 'Iteration'])
+    return latex_df.to_latex(escape=False, index=False, multicolumn_format='c')

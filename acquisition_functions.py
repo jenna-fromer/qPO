@@ -3,6 +3,7 @@ from gp import TanimotoGP
 import torch
 import botorch 
 import numpy as np 
+import random
 
 def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, batch_size: int = 100, best_f: float = None, **kwargs):
     acq_functions = {
@@ -11,13 +12,15 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
         'Ours': acquire_ours, 
         'pTS': acquire_ts,
         'qEI': acquire_sequential_qei,
+        'random_10k': acquire_random, 
+        'random': acquire_random,
     }
-    if ( method == 'Ours' or method == 'pTS' or method == 'qEI') and len(smiles) > 5000: 
+    if method in {'Ours', 'pTS', 'qEI', 'random_10k'} and len(smiles) > 10000: 
         smiles_filtered = acq_functions['Greedy'](
             smiles=smiles, 
             model=model, 
             featurizer=featurizer, 
-            gpu=gpu, c=c, batch_size=5000, **kwargs
+            gpu=gpu, c=c, batch_size=10000, **kwargs
         )
         return acq_functions[method](
             smiles=smiles_filtered, 
@@ -70,12 +73,19 @@ def acquire_ours(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 1
     try: 
         samples = p_yx.rvs(size=Ns, random_state=seed)
     except: 
-        print('Error sampling from multivariate, adding noise to diagonal')
-        cov = cov + np.identity(len(mean))*1e-5
-        p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
-        samples = p_yx.rvs(size=Ns, random_state=seed)
+        count = 0
+        sampled = False 
+        while count < 10 and not sampled: 
+            print('Error sampling from multivariate, adding noise to diagonal')
+            try: 
+                cov = cov + np.identity(len(mean))*1e-8
+                p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
+                samples = p_yx.rvs(size=Ns, random_state=seed)
+                sampled = True 
+            except: 
+                continue
     
-    top_samples = np.array([np.argmax(sample) if c==1 else np.argmin(samples) for sample in samples])
+    top_samples = np.array([np.argmax(c*sample) for sample in samples])
     probs = np.bincount(top_samples, minlength=len(mean))/Ns # [np.sum(top_k_samples==i)/N_samples for i in range(samples.shape[1])]
     acquisition_scores = {smi: (-1*prob, -1*c*mean) for smi, prob, mean in zip(smiles, probs, mean)} # for equal probs, use mean for sorting 
     sorted_smis = sorted(smiles, key=lambda smi: acquisition_scores[smi] )
@@ -87,10 +97,17 @@ def acquire_ts(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100
     try: 
         samples = p_yx.rvs(size=batch_size, random_state=seed)
     except: 
-        print('Error sampling from multivariate, adding noise to diagonal')
-        cov = cov + np.identity(len(mean))*1e-5
-        p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
-        samples = p_yx.rvs(size=batch_size, random_state=seed)
+        count = 0
+        sampled = False 
+        while count < 10 and not sampled:
+            try:
+                print('Error sampling from multivariate, adding noise to diagonal')
+                cov = cov + np.identity(len(mean))*1e-8
+                p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
+                samples = p_yx.rvs(size=batch_size, random_state=seed)
+                sampled = True 
+            except: 
+                continue
 
     selected_inds = []
 
@@ -119,3 +136,6 @@ def acquire_sequential_qei(smiles, model, featurizer, gpu, best_f, c: int = 1, b
     idx = np.where( (X_test.cpu()==selections.cpu()[:,None]).all(-1) )[1]
     idx = list(set(idx))[:batch_size]
     return [smiles[i] for i in idx] 
+
+def acquire_random(smiles, batch_size: int = 100, **kwargs): 
+    return random.sample(smiles, batch_size)
