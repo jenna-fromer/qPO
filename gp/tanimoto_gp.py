@@ -1,4 +1,4 @@
-""" Code for GPs with Tanimot kernel """
+""" Code for GPs with Tanimoto kernel """
 
 import torch
 import gpytorch
