@@ -11,7 +11,7 @@ conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvi
 pip install -r requirements.txt 
 ```
 
-You can modify the second line with your preferences according to the directions [here](https://pytorch.org/get-started/locally/). 
+You can modify the third line with your preferences according to the directions [here](https://pytorch.org/get-started/locally/). 
 
 ## Running experiments 
 
