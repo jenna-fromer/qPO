@@ -6,22 +6,26 @@ import numpy as np
 import random
 
 def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, batch_size: int = 100, best_f: float = None, **kwargs):
+    """ Calls appropriate acquisition function """
+    
     acq_functions = {
         'Greedy': acquire_mean, 
         'UCB': acquire_ucb, 
-        'Ours': acquire_ours, 
+        'Ours': acquire_ours, # qPO
         'pTS': acquire_ts,
         'qEI': acquire_sequential_qei,
         'random_10k': acquire_random, 
         'random': acquire_random,
     }
     if method in {'Ours', 'pTS', 'qEI', 'random_10k'} and len(smiles) > 10000: 
+        # get top 10k by mean 
         smiles_filtered = acq_functions['Greedy'](
             smiles=smiles, 
             model=model, 
             featurizer=featurizer, 
             gpu=gpu, c=c, batch_size=10000, **kwargs
         )
+        # apply acquisition strategy to remaining 10k candidates 
         return acq_functions[method](
             smiles=smiles_filtered, 
             model=model, 
@@ -39,6 +43,8 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
     )
 
 def mean_cov_from_gp(model: TanimotoGP, smiles: list, featurizer: dict, full_cov: bool = True, gpu: bool = True): 
+    """ Returns the mean and covariance (or variance) of the surrogate model posterior """
+    
     model.eval()
     model.likelihood.eval()
     X_test = np.array([featurizer[smi] for smi in smiles])
@@ -56,18 +62,24 @@ def mean_cov_from_gp(model: TanimotoGP, smiles: list, featurizer: dict, full_cov
     return f_preds.mean.detach().numpy(), f_preds.variance.detach().numpy() # np.squeeze(mean.numpy()), np.squeeze(var.numpy())
 
 def acquire_mean(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, **kwargs): 
+    """ Greedy acquisition function """
+
     mean, _ = mean_cov_from_gp(smiles=smiles, model=model, featurizer=featurizer, full_cov=False, gpu=gpu)
     acquisition_scores = {smi: score for smi, score in zip(smiles, c*mean)}
     sorted_smis = sorted(smiles, key=lambda smi: -1*acquisition_scores[smi])
     return sorted_smis[:batch_size]
 
 def acquire_ucb(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, beta: float = 1, **kwargs): 
+    """ Upper confidence bound acquisition function """
+
     mean, var = mean_cov_from_gp(smiles=smiles, model=model, featurizer=featurizer, full_cov=False, gpu=gpu)
     acquisition_scores = {smi: score for smi, score in zip(smiles, c*mean + beta*np.sqrt(var))}
     sorted_smis = sorted(smiles, key=lambda smi: -1*acquisition_scores[smi])
     return sorted_smis[:batch_size]
 
 def acquire_ours(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, Ns: int = 10000, seed: int = None, **kwargs): 
+    """ The proposed acquisition function -- qPO (multipoint probability of optimality) """
+    
     mean, cov = mean_cov_from_gp(smiles=smiles, model=model, featurizer=featurizer, full_cov=True, gpu=gpu)
     p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
     try: 
@@ -92,6 +104,8 @@ def acquire_ours(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 1
     return sorted_smis[:batch_size]
 
 def acquire_ts(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, seed: int = None, **kwargs): 
+    """ Acquisition with parallel Thomspon sampling """
+
     mean, cov = mean_cov_from_gp(smiles=smiles, model=model, featurizer=featurizer, full_cov=True, gpu=gpu)
     p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
     try: 
@@ -122,6 +136,8 @@ def acquire_ts(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100
     return selected_smis
 
 def acquire_sequential_qei(smiles, model, featurizer, gpu, best_f, c: int = 1, batch_size: int = 100, seed: int = None, **kwargs):
+    """Acquisition with multipoint expected improvement"""
+
     X_test = np.array([featurizer[smi] for smi in smiles])
     X_test = torch.as_tensor(X_test).cuda() if gpu else torch.as_tensor(X_test)    
     sampler = botorch.sampling.normal.SobolQMCNormalSampler(sample_shape=X_test[0].shape, seed=seed)
@@ -138,4 +154,5 @@ def acquire_sequential_qei(smiles, model, featurizer, gpu, best_f, c: int = 1, b
     return [smiles[i] for i in idx] 
 
 def acquire_random(smiles, batch_size: int = 100, **kwargs): 
+    """ Random acquistion """
     return random.sample(smiles, batch_size)

@@ -33,12 +33,15 @@ def smiles_to_fingerprint_arr(
     radius: int = 3, 
     fpSize: int = 2048,
 ) -> np.array:
+    """ Converts a list of SMILES to a numpy array of fingerprints """
+
     mfpgen = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=fpSize)
     mols = [Chem.MolFromSmiles(s) for s in smiles_list]
     fps = [mfpgen.GetCountFingerprintAsNumPy(m) for m in mols]
     return np.asarray(fps, dtype=float)
 
 def fp_featurizer(smiles_list): 
+    """ Generates a dictionary mapping SMILES in the design space to count Morgan fingerprints """
     fps = smiles_to_fingerprint_arr(smiles_list)
     featurizer = {
         smi: fps[i,:]
@@ -56,6 +59,7 @@ def update_acquired(acquired_data, unacquired_smiles: set, selected_smiles, test
     return acquired_data, unacquired_smiles
 
 def train_model(acquired_data, featurizer, gpu: bool = True): 
+    """ Train surrogate model on acquired data """
     X_train = np.array([featurizer[smi] for smi in acquired_data])
     y_train = np.array(list(acquired_data.values()))
     if gpu: 
@@ -77,6 +81,8 @@ def run(
     batch_size: int = 100, initial_batch_size: int = None, 
     res_dir: str = 'results', method: str = 'ours', 
     res_file: str = None): 
+
+    """ Performs Bayesian optimization loop """
 
     print('starting run')
 
@@ -115,6 +121,8 @@ def run(
         top_aves = {f'Top {k} ave': np.mean(acq_vals[-1*k:]) for k in [1, 10, 50, 100]}
         storage.append({**{
             'Method': method, 
+            'Objective': objective, 
+            'Dataset': dataset,
             'Iteration': 0,
             'All acquired points': copy.deepcopy(acquired_data),
             'New acquired points': {smi: acquired_data[smi] for smi in selected_smiles},
