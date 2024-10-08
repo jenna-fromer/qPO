@@ -3,3 +3,5 @@ results*
 *logs/
 .vscode/
 void/
+*.pdf 
+*.txt
