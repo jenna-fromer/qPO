@@ -1,6 +1,6 @@
 # Batched Bayesian optimization with correlated candidate uncertainties
 
-This folder contains the code to reproduce the results in the manuscript entitled "Batched Bayesian optimization with correlated candidate uncertainties". 
+This repository contains the code to reproduce the results in the manuscript entitled "Batched Bayesian optimization with correlated candidate uncertainties". 
 
 ## Installation 
 
