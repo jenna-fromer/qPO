@@ -8,6 +8,7 @@ import random
 import json 
 import copy
 import argparse 
+import time 
 
 from gp import TanimotoGP, fit_gp_hyperparameters
 from acquisition_functions import acquire
@@ -106,6 +107,9 @@ def run(
 
     # run BO 
     for rs in random_seeds: 
+
+        start_time = time.time()
+
         # initialize 
         acquired_data = {}
         unacquired_smiles = list(set(all_smiles))
@@ -126,7 +130,8 @@ def run(
             'Iteration': 0,
             'All acquired points': copy.deepcopy(acquired_data),
             'New acquired points': {smi: acquired_data[smi] for smi in selected_smiles},
-            'Random seed': rs
+            'Random seed': rs,
+            'Cumulative run time': time.time() - start_time,
         }, **top_aves})
 
         # train model
@@ -158,7 +163,8 @@ def run(
                 'Iteration': iter,
                 'All acquired points': copy.deepcopy(acquired_data),
                 'New acquired points': {smi: acquired_data[smi] for smi in selected_smiles},
-                'Random seed': rs
+                'Random seed': rs,
+                'Cumulative run time': time.time() - start_time,
             }, **top_aves})
 
             # train model 
