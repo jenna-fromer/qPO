@@ -15,7 +15,8 @@ from acquisition_functions import acquire
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--method', type=str, default='qEI', choices=['Ours', 'pTS', 'Greedy', 'UCB', 'qEI', 'random', 'random_10k'])
+    parser.add_argument('--method', type=str, default='qEI', 
+                        choices=['Ours', 'pTS', 'Greedy', 'UCB', 'qEI', 'random', 'random_10k', 'GIBBON'])
     parser.add_argument('--dataset', type=str, default='Lipophilicity')
     parser.add_argument('--objective', type=str, default='exp')
     parser.add_argument('--c', type=int, default=1)

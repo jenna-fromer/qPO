@@ -16,8 +16,9 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
         'qEI': acquire_sequential_qei,
         'random_10k': acquire_random, 
         'random': acquire_random,
+        'GIBBON': acquire_GIBBON,
     }
-    if method in {'Ours', 'pTS', 'qEI', 'random_10k'} and len(smiles) > 10000: 
+    if method in {'Ours', 'pTS', 'qEI', 'random_10k', 'GIBBON'} and len(smiles) > 10000: 
         # get top 10k by mean 
         smiles_filtered = acq_functions['Greedy'](
             smiles=smiles, 
@@ -149,6 +150,31 @@ def acquire_sequential_qei(smiles, model, featurizer, gpu, best_f, c: int = 1, b
         acq_function = botorch.acquisition.logei.qLogExpectedImprovement(model=model, best_f=best_f, sampler=sampler)
 
     selections, _ = botorch.optim.optimize.optimize_acqf_discrete(acq_function, q=batch_size, choices=X_test, max_batch_size=batch_size, unique=True)
+    idx = np.where( (X_test.cpu()==selections.cpu()[:,None]).all(-1) )[1]
+    idx = list(set(idx))[:batch_size]
+    return [smiles[i] for i in idx] 
+
+def acquire_GIBBON(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, seed: int = None, **kwargs): 
+    X_test = np.array([featurizer[smi] for smi in smiles])
+    dim = X_test.shape[1]
+    bounds = torch.as_tensor(
+        np.array([np.zeros(shape=(dim,)), np.max(X_test, axis=0)]), device = 'cuda' if gpu else 'cpu' 
+    )
+
+    X_test = torch.as_tensor(X_test).cuda() if gpu else torch.as_tensor(X_test)  
+    qGIBBON = botorch.acquisition.max_value_entropy_search.qLowerBoundMaxValueEntropy(
+        model=model, candidate_set=X_test,
+        maximize=False if c==-1 else True
+    )
+    
+    selections, _ = botorch.optim.optimize_acqf_discrete(
+        acq_function=qGIBBON,
+        q=batch_size,
+        choices=X_test,
+        max_batch_size=batch_size,
+        unique=True,
+    )
+
     idx = np.where( (X_test.cpu()==selections.cpu()[:,None]).all(-1) )[1]
     idx = list(set(idx))[:batch_size]
     return [smiles[i] for i in idx] 
