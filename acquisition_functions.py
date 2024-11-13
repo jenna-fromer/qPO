@@ -242,10 +242,7 @@ def acquire_qPO_orthant(smiles, model, featurizer, gpu, c: int = 1, batch_size: 
     # mean = torch.as_tensor(mean, device=device).float()
     # cov = torch.as_tensor(cov, device=device).float()
     fn = lambda i: qPO_acqscore_orthant(mean=mean, cov=cov, i=i, device=device, N_samples=Ns, c=c)
-    # probs = [fn(i) for i in range(len(smiles))]
-    fn(0)
-    print('finished 1')
-    probs = simple_parallel(input_list=[0], function=fn, max_cpu=64)
+    probs = simple_parallel(input_list=list(range(len(smiles))), function=fn, max_cpu=64)
     acquisition_scores = {smi: (-1*prob, -1*c*mean) for smi, prob, mean in zip(smiles, probs, mean)} # for equal probs, use mean for sorting 
     sorted_smis = sorted(smiles, key=lambda smi: acquisition_scores[smi] )
     return sorted_smis[:batch_size]
