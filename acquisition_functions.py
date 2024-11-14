@@ -26,8 +26,9 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
         'qPO_orthant': acquire_qPO_orthant,
         'TS_RSR': acquire_TSRSR,
         'DPPTS': acquire_DPPTS,
+        'BUCB': acquire_batch_ucb,
     }
-    if method in {'Ours', 'pTS', 'qEI', 'random_10k', 'GIBBON', 'qPO_orthant', 'TS_RSR', 'DPPTS', 'qPI'} and len(smiles) > 10000: 
+    if method in {'qPO', 'pTS', 'qEI', 'random_10k', 'GIBBON', 'qPO_orthant', 'TS_RSR', 'DPPTS', 'qPI', 'BUCB'} and len(smiles) > 10000: 
         # get top 10k by mean 
         smiles_filtered = acq_functions['Greedy'](
             smiles=smiles, 
@@ -339,6 +340,24 @@ def acquire_sequential_qpi(smiles, model, featurizer, gpu, best_f, c: int = 1, b
         acq_function = botorch.acquisition.monte_carlo.qProbabilityOfImprovement(model=model, best_f=c*best_f, sampler=sampler, objective=objective)
     else: 
         acq_function = botorch.acquisition.monte_carlo.qProbabilityOfImprovement(model=model, best_f=best_f, sampler=sampler)
+
+    selections, _ = botorch.optim.optimize.optimize_acqf_discrete(acq_function, q=batch_size, choices=X_test, max_batch_size=batch_size, unique=True)
+    idx = np.where( (X_test.cpu()==selections.cpu()[:,None]).all(-1) )[1]
+    idx = list(set(idx))[:batch_size]
+    return [smiles[i] for i in idx] 
+
+def acquire_batch_ucb(smiles, model, featurizer, gpu, best_f, c: int = 1, batch_size: int = 100, seed: int = None, **kwargs):
+    """Acquisition with multipoint upper confidence bound, and uses beta = sqrt(3) following Wilson et al 2017. """
+
+    X_test = np.array([featurizer[smi] for smi in smiles])
+    X_test = torch.as_tensor(X_test).cuda() if gpu else torch.as_tensor(X_test)    
+    sampler = botorch.sampling.normal.SobolQMCNormalSampler(sample_shape=X_test[0].shape, seed=seed)
+    if c == -1: 
+        weights = torch.as_tensor([-1]).cuda() if gpu else torch.as_tensor([-1])
+        objective = botorch.acquisition.objective.LinearMCObjective(weights)
+        acq_function = botorch.acquisition.monte_carlo.qUpperConfidenceBound(model=model, beta=np.sqrt(3), sampler=sampler, objective=objective)
+    else: 
+        acq_function = botorch.acquisition.monte_carlo.qUpperConfidenceBound(model=model, beta=np.sqrt(3), best_f=best_f, sampler=sampler)
 
     selections, _ = botorch.optim.optimize.optimize_acqf_discrete(acq_function, q=batch_size, choices=X_test, max_batch_size=batch_size, unique=True)
     idx = np.where( (X_test.cpu()==selections.cpu()[:,None]).all(-1) )[1]

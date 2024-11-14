@@ -1,5 +1,10 @@
+python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=BUCB --n_iter=10 --batch_size=50 --gpu
+python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=GIBBON --n_iter=10 --batch_size=50 --gpu
+python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=TS_RSR --n_iter=10 --batch_size=50 --gpu
+python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=DPPTS --n_iter=10 --batch_size=50 --gpu
+python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=qPI --n_iter=10 --batch_size=50 --gpu
 python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=UCB --n_iter=10 --batch_size=50 --gpu
 python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=Greedy --n_iter=10 --batch_size=50 --gpu
-python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=Ours --n_iter=10 --batch_size=50 --gpu
+python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=qPO --n_iter=10 --batch_size=50 --gpu
 python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=pTS --n_iter=10 --batch_size=50 --gpu
 python run.py --c=-1 --dataset=wong_antibiotics --objective=Mean_50uM --method=qEI --n_iter=10 --batch_size=50 --gpu
