@@ -26,6 +26,7 @@ def parse_args():
     parser.add_argument('--initial_batch_size', type=int, default=None)
     parser.add_argument('--res_dir', type=str, default='results')
     parser.add_argument('--res_file', type=str, default=None)
+    parser.add_argument('--N_samples', type=int, default=10000)
 
     args = parser.parse_args()
     return args 
@@ -82,7 +83,7 @@ def run(
     n_iter: int = 10, random_seeds: list = None, 
     batch_size: int = 100, initial_batch_size: int = None, 
     res_dir: str = 'results', method: str = 'ours', 
-    res_file: str = None): 
+    res_file: str = None, N_samples: int = 10000): 
 
     """ Performs Bayesian optimization loop """
 
@@ -147,7 +148,7 @@ def run(
             selected_smiles = acquire(
                 method=method, smiles=unacquired_smiles, 
                 model=model, featurizer=featurizer, 
-                batch_size=batch_size, gpu=gpu, 
+                batch_size=batch_size, gpu=gpu, N_samples=N_samples,
                 best_f=max(acq_vals) if c == 1 else min(acq_vals), c=c
             ) 
 
@@ -183,7 +184,7 @@ if __name__=='__main__':
     run(
         dataset=args.dataset,
         objective=args.objective,
-        c=args.c, gpu=args.gpu, 
+        c=args.c, gpu=args.gpu, N_samples=args.N_samples,
         n_iter=args.n_iter, random_seeds=range(10),
         batch_size=args.batch_size, initial_batch_size=args.initial_batch_size,
         res_dir=args.res_dir, res_file=args.res_file, 

@@ -10,7 +10,7 @@ import copy
 
 from utils import simple_parallel, tanimoto_matrix
 
-def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, batch_size: int = 100, best_f: float = None, **kwargs):
+def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, batch_size: int = 100, best_f: float = None, N_samples: int = 10000, **kwargs):
     """ Calls appropriate acquisition function """
     
     acq_functions = {
@@ -30,7 +30,7 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
     }
     if method in {'qPO', 'pTS', 'qEI', 'random_10k', 'GIBBON', 'qPO_orthant', 'TS_RSR', 'DPPTS', 'qPI', 'BUCB'} and len(smiles) > 10000: 
         # get top 10k by mean 
-        smiles_filtered = acq_functions['Greedy'](
+        smiles_filtered = acq_functions['UCB'](
             smiles=smiles, 
             model=model, 
             featurizer=featurizer, 
@@ -39,7 +39,7 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
         # apply acquisition strategy to remaining 10k candidates 
         return acq_functions[method](
             smiles=smiles_filtered, 
-            model=model, 
+            model=model, N_samples=N_samples,
             featurizer=featurizer, 
             gpu=gpu, c=c, batch_size=batch_size, 
             best_f=best_f, **kwargs
@@ -47,7 +47,7 @@ def acquire(method, smiles, model, featurizer, gpu: bool = True, c: int = 1, bat
     
     return acq_functions[method](
         smiles=smiles, 
-        model=model, 
+        model=model, N_samples=N_samples,
         featurizer=featurizer, 
         gpu=gpu, c=c, batch_size=batch_size, 
         best_f=best_f, **kwargs
@@ -88,13 +88,13 @@ def acquire_ucb(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 10
     sorted_smis = sorted(smiles, key=lambda smi: -1*acquisition_scores[smi])
     return sorted_smis[:batch_size]
 
-def acquire_qPO(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, Ns: int = 10000, seed: int = None, **kwargs): 
+def acquire_qPO(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, N_samples: int = 10000, seed: int = None, **kwargs): 
     """ The proposed acquisition function -- qPO (multipoint probability of optimality) """
     
     mean, cov = mean_cov_from_gp(smiles=smiles, model=model, featurizer=featurizer, full_cov=True, gpu=gpu)
     p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
     try: 
-        samples = p_yx.rvs(size=Ns, random_state=seed)
+        samples = p_yx.rvs(size=N_samples, random_state=seed)
     except: 
         count = 0
         sampled = False 
@@ -103,13 +103,13 @@ def acquire_qPO(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 10
             try: 
                 cov = cov + np.identity(len(mean))*1e-8
                 p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
-                samples = p_yx.rvs(size=Ns, random_state=seed)
+                samples = p_yx.rvs(size=N_samples, random_state=seed)
                 sampled = True 
             except: 
                 continue
     
     top_samples = np.array([np.argmax(c*sample) for sample in samples])
-    probs = np.bincount(top_samples, minlength=len(mean))/Ns # [np.sum(top_k_samples==i)/N_samples for i in range(samples.shape[1])]
+    probs = np.bincount(top_samples, minlength=len(mean))/N_samples # [np.sum(top_k_samples==i)/N_samples for i in range(samples.shape[1])]
     acquisition_scores = {smi: (-1*prob, -1*c*mean) for smi, prob, mean in zip(smiles, probs, mean)} # for equal probs, use mean for sorting 
     sorted_smis = sorted(smiles, key=lambda smi: acquisition_scores[smi] )
     return sorted_smis[:batch_size]
@@ -237,12 +237,12 @@ def qPO_acqscore_orthant(mean: torch.Tensor, cov: torch.Tensor, device, i, N_sam
     
     return intsum/N_samples    
 
-def acquire_qPO_orthant(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, Ns: int = 10000, seed: int = None, **kwargs): 
+def acquire_qPO_orthant(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, N_samples: int = 10000, seed: int = None, **kwargs): 
     mean, cov = mean_cov_from_gp(smiles=smiles, model=model, featurizer=featurizer, full_cov=True, gpu=gpu)
     device = 'cuda' if gpu else 'cpu'
     # mean = torch.as_tensor(mean, device=device).float()
     # cov = torch.as_tensor(cov, device=device).float()
-    fn = lambda i: qPO_acqscore_orthant(mean=mean, cov=cov, i=i, device=device, N_samples=Ns, c=c)
+    fn = lambda i: qPO_acqscore_orthant(mean=mean, cov=cov, i=i, device=device, N_samples=N_samples, c=c)
     probs = simple_parallel(input_list=list(range(len(smiles))), function=fn, max_cpu=64)
     acquisition_scores = {smi: (-1*prob, -1*c*mean) for smi, prob, mean in zip(smiles, probs, mean)} # for equal probs, use mean for sorting 
     sorted_smis = sorted(smiles, key=lambda smi: acquisition_scores[smi] )
@@ -283,14 +283,14 @@ def acquire_TSRSR(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 
 
     return selected_smis
 
-def acquire_DPPTS(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, Ns: int = 10000, seed: int = None, N_iter: int = 1000, **kwargs): 
+def acquire_DPPTS(smiles, model, featurizer, gpu, c: int = 1, batch_size: int = 100, N_samples: int = 10000, seed: int = None, N_iter: int = 1000, **kwargs): 
 
     selections = random.sample(range(len(smiles)), batch_size)
     mean, cov = mean_cov_from_gp(smiles=smiles, model=model, featurizer=featurizer, full_cov=True, gpu=gpu)
     p_yx = multivariate_normal(mean=mean, cov=cov, allow_singular=True, seed=seed)
 
-    # obtain Ns posterior samples 
-    samples = p_yx.rvs(random_state=seed, size=Ns) 
+    # obtain N_samples posterior samples 
+    samples = p_yx.rvs(random_state=seed, size=N_samples) 
 
     X = np.array([featurizer[smiles[i]] for i in selections])
     for _ in range(N_iter): 
@@ -357,7 +357,7 @@ def acquire_batch_ucb(smiles, model, featurizer, gpu, best_f, c: int = 1, batch_
         objective = botorch.acquisition.objective.LinearMCObjective(weights)
         acq_function = botorch.acquisition.monte_carlo.qUpperConfidenceBound(model=model, beta=np.sqrt(3), sampler=sampler, objective=objective)
     else: 
-        acq_function = botorch.acquisition.monte_carlo.qUpperConfidenceBound(model=model, beta=np.sqrt(3), best_f=best_f, sampler=sampler)
+        acq_function = botorch.acquisition.monte_carlo.qUpperConfidenceBound(model=model, beta=np.sqrt(3), sampler=sampler)
 
     selections, _ = botorch.optim.optimize.optimize_acqf_discrete(acq_function, q=batch_size, choices=X_test, max_batch_size=batch_size, unique=True)
     idx = np.where( (X_test.cpu()==selections.cpu()[:,None]).all(-1) )[1]
