@@ -7,12 +7,17 @@ import scipy
 import numpy as np 
 
 method_colors = {
-    'Ours': '#1C6090',
     'pTS': '#FF7F0E',
     'qEI': '#39A039',
     'UCB': '#BB2829',
     'Greedy': '#8E5BBB',
-    'random_10k': '#9A9A96'
+    'random_10k': '#9A9A96',
+    'TS_RSR': '#DECA38', 
+    'BUCB': '#EA5978', 
+    'qPI': '#EA5978', 
+    'GIBBON': '',
+    'DPPTS': '',
+    'qPO': '#1C6090',
 }
 
 method_styles = {
@@ -85,7 +90,7 @@ def make_color_darker(scale, color: str):
     rgb = mpl.colors.ColorConverter.to_rgb(color)
     return scale_lightness(rgb, scale)
 
-def df_to_latex(data: pd.DataFrame):
+def df_to_latex(data: pd.DataFrame, iters: list = None, columns: list = None):
     latex_data = []
     for method in data.Method.unique(): 
         df_method = data.loc[data.Method == method]
@@ -94,7 +99,7 @@ def df_to_latex(data: pd.DataFrame):
             df_method_iter = df_method_iter.drop('Top 1 ave', axis=1)
             stor = {}
             for col in df_method_iter.columns: 
-                if 'Top' in col or 'top' in col: 
+                if 'Top' in col or 'top' in col or 'Regret' in col: 
                     mean = np.mean(df_method_iter[f'{col}'])
                     se = scipy.stats.sem(df_method_iter[f'{col}'])
                     stor[col] = f'{mean:0.2f} $\pm$ {se:0.2f}'
@@ -103,4 +108,9 @@ def df_to_latex(data: pd.DataFrame):
                 'Iteration': iter, 
             },**stor})
     latex_df = pd.DataFrame(latex_data).sort_values(by=['Method', 'Iteration'])
+    if iters: 
+        latex_df = latex_df.loc[latex_df['Iteration'].isin(iters)]
+        latex_df = latex_df.sort_values(by=['Iteration', 'Method'])
+    if columns: 
+        latex_df = latex_df[columns]
     return latex_df.to_latex(escape=False, index=False, multicolumn_format='c')
